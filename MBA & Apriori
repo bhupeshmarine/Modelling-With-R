@@ -1,122 +1,24 @@
-# (a) Importing data to R code from the directory and saving it to organics
-library(readxl)
-organics <- read_excel("D:/MSBA/BUAN 6356/HW2/organics.xlsx")
-View(organics)
+#checking working current directory
+getwd()
 
-#(b)storing the TargetBuy data in a new variable count 
-count <- table(organics$TargetBuy)
+#setting working directory to desired folder
+setwd("D:/MSBA/BUAN 6356/HW3")
 
-#Printing the count of Organic and non organic product users
-count
+#(a) Importing 'transactions' data set to R in the form of transitional data set
+library(arules)
+tran.data <- read.transactions("transactions.csv", format = "single", header = TRUE, sep =",", cols =c("Customer","Product"), rm.duplicates = TRUE)
 
-count.per 
-
-#Finding the persentage of people using orginc products
-persentage <- count*100/22222
-persentage
+#Inspecting 10 rows
+inspect(head(tran.data, n=10))
 
 
-#Making barplot of organic and non organic product user
-barplot(count, ylim = c(0,20000))
-barplot(persentage, ylim=c(0,100))
+#(b) Running apriori(), include the minimum support 0.01, minimum confidence 0.10
+rules <- apriori(tran.data, parameter = list(supp = 0.01, conf = 0.10))
 
-barplot(organics$TargetBuy)
+# sort rules by "lift"
+rules <- sort(rules, by = "lift", decreasing = TRUE) 
 
-#(c)Excluding DemCluster variable from the organics and storing it to org 
-org <- organics[,1,-4]
-View(org)
-
-#(d)
-
-
-#(e)Partitioning data:
-#storing odd and even rows in odd_row variable
-odd_row <- seq_len(nrow(org))%%2
-
-#Making a data set of odd rows from org 
-odd_data <- org[odd_row==1,]
-View(odd_data)
-
-#Making a data set of even rows from org
-even_data <- org[odd_row==0,]
-View(even_data)
-
-#(f)
-# use rpart() to run a classification tree
-# use prp() in rpart.plot to plot tree 
-library(rpart)
-library(rpart.plot)
-
-train.df <- odd_data
-valid.df <- even_data
-
-
-# classification tree
-# use rpart() to run a classification tree.
-tree <- rpart(TargetBuy~., data = train.df, method = "class")
-prp(tree, type =1, extra=1)
-
-#(g)
-
-default.v <- rpart(formula =TargetBuy ~ ., data=valid.df, method ='class' )
-prp(default.v ,type =1 ,extra=1)
-
-default.valid <- predict(default.v, valid.df,type="class")
-
-confusionMatrix(default.valid ,as.factor(valid.df$TargetBuy))
-
-
-
-#(h) Creating new tree imposing maxdepth = 2
-library(caret)
-newtree <- rpart(TargetBuy ~ ., data = train.df, control = rpart.control(maxdepth = 2), method = "class")
-prp(newtree, type=1, extra = 1)
-
-
-default.v2 <- rpart(formula =TargetBuy ~ ., data=train.df, method ='class' )
-prp(default.v ,type =1 ,extra=1)
-
-default.valid2 <- predict(default.v2, train.df,type="class")
-
-confusionMatrix(default.valid2 ,as.factor(train.df$TargetBuy))
-
-
-
-
-
-#(i)
-
-sum(is.na(organics$DemAge))
-
-#(j)
-
-organics$DemAffl[is.na(organics$DemAffl) == TRUE] <- "U"
-organics$DemAge[is.na(organics$DemAge) == TRUE] <- mean(organics$DemAge, na.rm = TRUE)
-
-
-#(k)
-logit.reg <- glm(TargetBuy ~ ., data = train.df, family = "binomial") 
-
-summary(logit.reg)
-
-# m
-
-
-mydata <- read.csv("http://www.ats.ucla.edu/stat/data/binary.csv")   
-mylogit <- glm(admit ~ gre, data = mydata, family = "binomial")    
-summary(mylogit)
-
-prob=predict(logit.reg,train.df,type=c("response"))    
-
-install.packages("ROCR")
-library(ROCR) 
-install.packages("prediction")
-library(prediction)  
-train.df$TargetBuy <- as.factor(train.df$TargetBuy)
-
-pred <- prediction(prob, train.df$TargetBuy)    
-perf <- performance(pred, measure = "tpr", x.measure = "fpr")     
-plot(perf, col=rainbow(7), main="ROC curve Admissions", xlab="Specificity", 
-     ylab="Sensitivity")    
-abline(0, 1)
+#(c) inspect the first 10 rules
+inspect(head(rules, n =10))
+summary(rules)
 
